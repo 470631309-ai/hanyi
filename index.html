@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
+  <!-- 手机适配关键：viewport-fit=cover（刘海/底部安全区更稳） -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Christmas Card</title>
   <style>
@@ -19,7 +20,7 @@
       overflow:hidden;
       background: linear-gradient(180deg, #0b1220, #050810);
       color:#fff;
-      -webkit-text-size-adjust: 100%;
+      -webkit-text-size-adjust:100%;
     }
     .bg-blur{
       position:fixed; inset:-40px;
@@ -64,6 +65,7 @@
       pointer-events:none;
     }
 
+    /* 字体改为自适应，手机不会被挤出屏幕 */
     .mc{
       color:var(--ink);
       font-weight:900;
@@ -161,12 +163,13 @@
       text-align:center;
     }
 
+    /* 小屏改成单列，避免你截图那种右侧被切掉 */
     @media (max-width: 520px){
       .card{
         grid-template-columns: 1fr;
-        height: auto;
-        padding: 22px;
-        gap: 14px;
+        height:auto;
+        padding:22px;
+        gap:14px;
       }
       .right{ padding-left:0; }
       .mc{ transform: rotate(-4deg); }
@@ -211,17 +214,12 @@
 
   let W=0, H=0, DPR=1;
 
-  function getViewportSize(){
-    // ✅ 内置浏览器/手机竖屏更稳：优先用 visualViewport
-    const vw = window.visualViewport?.width || window.innerWidth;
-    const vh = window.visualViewport?.height || window.innerHeight;
-    return { vw, vh };
-  }
-
+  // ✅ 微信/抖音内置浏览器更准：优先 visualViewport
   function resize(){
     DPR = Math.min(2, window.devicePixelRatio || 1);
+    const vw = window.visualViewport?.width || window.innerWidth;
+    const vh = window.visualViewport?.height || window.innerHeight;
 
-    const { vw, vh } = getViewportSize();
     W = Math.floor(vw);
     H = Math.floor(vh);
 
@@ -232,7 +230,6 @@
     ctx.setTransform(DPR,0,0,DPR,0,0);
     buildAll();
   }
-
   window.addEventListener("resize", resize);
   window.visualViewport?.addEventListener("resize", resize);
 
@@ -309,9 +306,10 @@
     }));
   }
 
+  // ✅ 圣诞树：完全沿用你给的算法，只改“在手机竖屏下更大更居中”的参数比例
   function buildTree(){
-    // ✅ 只改“比例/位置”，不改树的生成方式（样子不会换）
-    const portrait = H > W * 1.15; // 竖屏判定
+    const portrait = H > W * 1.15;
+
     tree.height = Math.min(680, H*(portrait ? 0.90 : 0.82));
     tree.baseRadius = Math.min(290, W*(portrait ? 0.32 : 0.24));
     tree.topY = -Math.min(320, H*(portrait ? 0.30 : 0.26));
@@ -380,6 +378,7 @@
         const n = rand(-R.thick, R.thick);
         const x = ex + (ex/R.rad)*n;
         const z = ez + (ez/(R.rad*0.55))*n;
+
         const y = R.y + rand(-6, 6);
         ringPts.push({x, y, z, a, phase:R.phase, seed:Math.random()*10});
       }
@@ -466,7 +465,7 @@
   }
 
   function drawGround(){
-    // ✅ 竖屏让地面占比小一点（树看起来更大）
+    // ✅ 竖屏让地面少一点（树更显大）
     const portrait = H > W * 1.15;
     const y0 = H * (portrait ? 0.78 : 0.72);
 
