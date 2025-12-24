@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <!-- ✅ 关键：加 viewport-fit=cover，iPhone 刘海/底部安全区更稳 -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Christmas Card</title>
   <style>
@@ -15,11 +14,7 @@
       --shadow: 0 20px 60px rgba(0,0,0,.35);
     }
     *{box-sizing:border-box}
-    html,body{
-      height:100%;
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-    }
+    html,body{height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;}
     body{
       overflow:hidden;
       background: linear-gradient(180deg, #0b1220, #050810);
@@ -69,7 +64,6 @@
       pointer-events:none;
     }
 
-    /* ✅ 字号用 clamp，手机不会把字挤出屏幕 */
     .mc{
       color:var(--ink);
       font-weight:900;
@@ -80,8 +74,6 @@
       transform: rotate(-6deg);
       margin-top:6px;
       user-select:none;
-      max-width: 100%;
-      word-break: keep-all;
     }
     .mc small{
       display:block;
@@ -99,7 +91,7 @@
       gap:12px;
       color:#222;
       padding-left:8px;
-      min-width: 0;
+      min-width:0;
     }
     .quote{ font-size: clamp(16px, 4.8vw, 20px); font-weight:700; }
     .sub{ font-size: clamp(14px, 4.2vw, 16px); opacity:.85; line-height:1.7; }
@@ -119,7 +111,6 @@
       border-radius:12px;
       background: rgba(31,59,179,.08);
       transition: transform .15s ease, background .2s ease;
-      max-width: 100%;
     }
     .click:hover{ transform: translateY(-1px); background: rgba(31,59,179,.12); }
     .click:active{ transform: translateY(1px); }
@@ -149,9 +140,9 @@
       pointer-events:none;
       text-shadow: 0 6px 18px rgba(0,0,0,.35);
       user-select:none;
+      padding:0 12px;
+      max-width:92vw;
       text-align:center;
-      padding: 0 12px;
-      max-width: 92vw;
     }
     .footer{
       position:fixed;
@@ -165,12 +156,11 @@
       pointer-events:none;
       text-shadow: 0 6px 18px rgba(0,0,0,.35);
       user-select:none;
+      padding:0 12px;
+      max-width:92vw;
       text-align:center;
-      padding: 0 12px;
-      max-width: 92vw;
     }
 
-    /* ✅ 关键：手机小屏改成单列，不再左右两栏挤爆 */
     @media (max-width: 520px){
       .card{
         grid-template-columns: 1fr;
@@ -178,12 +168,10 @@
         padding: 22px;
         gap: 14px;
       }
-      .right{
-        padding-left: 0;
-      }
+      .right{ padding-left:0; }
       .mc{ transform: rotate(-4deg); }
       .mc small{ transform: rotate(4deg); }
-      .click{ width: 100%; justify-content: center; }
+      .click{ width:100%; justify-content:center; }
     }
   </style>
 </head>
@@ -222,10 +210,21 @@
   const ctx = canvas.getContext("2d");
 
   let W=0, H=0, DPR=1;
+
+  function getViewportSize(){
+    // ✅ 内置浏览器/手机竖屏更稳：优先用 visualViewport
+    const vw = window.visualViewport?.width || window.innerWidth;
+    const vh = window.visualViewport?.height || window.innerHeight;
+    return { vw, vh };
+  }
+
   function resize(){
     DPR = Math.min(2, window.devicePixelRatio || 1);
-    W = Math.floor(window.innerWidth);
-    H = Math.floor(window.innerHeight);
+
+    const { vw, vh } = getViewportSize();
+    W = Math.floor(vw);
+    H = Math.floor(vh);
+
     canvas.width = Math.floor(W * DPR);
     canvas.height = Math.floor(H * DPR);
     canvas.style.width = W + "px";
@@ -233,7 +232,9 @@
     ctx.setTransform(DPR,0,0,DPR,0,0);
     buildAll();
   }
+
   window.addEventListener("resize", resize);
+  window.visualViewport?.addEventListener("resize", resize);
 
   // ---------- Helpers ----------
   function rand(a,b){ return a + Math.random()*(b-a); }
@@ -309,29 +310,27 @@
   }
 
   function buildTree(){
-    tree.height = Math.min(610, H*0.82);
-    tree.baseRadius = Math.min(250, W*0.24);
-    tree.topY = -Math.min(280, H*0.26);
+    // ✅ 只改“比例/位置”，不改树的生成方式（样子不会换）
+    const portrait = H > W * 1.15; // 竖屏判定
+    tree.height = Math.min(680, H*(portrait ? 0.90 : 0.82));
+    tree.baseRadius = Math.min(290, W*(portrait ? 0.32 : 0.24));
+    tree.topY = -Math.min(320, H*(portrait ? 0.30 : 0.26));
 
     const N = 5200; // tree particle count
     const turns = 10.5;
 
     treePts = [];
     for(let i=0;i<N;i++){
-      // u=0 at top, 1 at bottom
-      const u = Math.pow(Math.random(), 0.65);      // bias to lower area for dense base
+      const u = Math.pow(Math.random(), 0.65);
       const y = tree.topY + u*tree.height;
 
-      // cone radius
       const rBase = Math.pow(u, 1.05) * tree.baseRadius;
-      // spiral angle
       const t = u * Math.PI*2*turns + rand(-0.9, 0.9);
       const rr = rBase * rand(0.70, 1.05);
 
       const x = Math.cos(t) * rr;
       const z = Math.sin(t) * rr;
 
-      // color gradient: top -> white, mid -> warm pink, bottom -> hot pink
       const tt = clamp((u - 0.10)/0.90, 0, 1);
       const cMid = mix(WHITE, WARM, tt);
       const cBot = mix(cMid, PINK, clamp((u-0.35)/0.65, 0, 1));
@@ -345,19 +344,16 @@
   }
 
   function buildHeart(){
-    // Heart param curve, sprinkle particles around it
     heartPts = [];
     const scale = 1.8;
     const count = 650;
 
-    // outline
     for(let i=0;i<count;i++){
       const t = (i/(count-1)) * Math.PI*2;
       const x = 16*Math.pow(Math.sin(t),3);
       const y = 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
       heartPts.push({x:x*scale, y:-y*scale});
     }
-    // fill
     const fillN = 900;
     for(let i=0;i<fillN;i++){
       const a = Math.random()*Math.PI*2;
@@ -370,7 +366,6 @@
 
   function buildRings(){
     ringPts = [];
-    // three rings like your image
     const rings = [
       {rad: Math.min(240, W*0.24), y: 180, thick: 18, n: 1200, phase: 0.0},
       {rad: Math.min(310, W*0.31), y: 206, thick: 22, n: 1400, phase: 0.6},
@@ -380,15 +375,11 @@
     for(const R of rings){
       for(let i=0;i<R.n;i++){
         const a = (i/R.n)*Math.PI*2;
-        // ellipse perspective
         const ex = Math.cos(a) * R.rad;
         const ez = Math.sin(a) * R.rad * 0.55;
-        // thickness as radial noise
         const n = rand(-R.thick, R.thick);
         const x = ex + (ex/R.rad)*n;
         const z = ez + (ez/(R.rad*0.55))*n;
-
-        // a little unevenness
         const y = R.y + rand(-6, 6);
         ringPts.push({x, y, z, a, phase:R.phase, seed:Math.random()*10});
       }
@@ -396,7 +387,6 @@
   }
 
   function buildCodeBackground(){
-    // pre-generate pseudo code lines to paint subtly
     bgCode = [];
     const lines = [
       "def main():",
@@ -432,14 +422,12 @@
 
   // ---------- Draw ----------
   function drawBackground(time){
-    // sky gradient
     const g = ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0, "#0a0f1b");
     g.addColorStop(1, "#04060c");
     ctx.fillStyle = g;
     ctx.fillRect(0,0,W,H);
 
-    // subtle code overlay
     ctx.save();
     ctx.globalAlpha = 0.10;
     ctx.fillStyle = "rgba(220,255,240,0.95)";
@@ -449,7 +437,6 @@
     }
     ctx.restore();
 
-    // vignette
     const vg = ctx.createRadialGradient(W*0.5,H*0.45, Math.min(W,H)*0.1, W*0.5,H*0.45, Math.min(W,H)*0.78);
     vg.addColorStop(0, "rgba(0,0,0,0)");
     vg.addColorStop(1, "rgba(0,0,0,0.60)");
@@ -479,8 +466,10 @@
   }
 
   function drawGround(){
-    // white snow ground block (like the reference)
-    const y0 = H*0.72;
+    // ✅ 竖屏让地面占比小一点（树看起来更大）
+    const portrait = H > W * 1.15;
+    const y0 = H * (portrait ? 0.78 : 0.72);
+
     ctx.save();
     const grd = ctx.createLinearGradient(0, y0, 0, H);
     grd.addColorStop(0, "rgba(236,246,255,0.95)");
@@ -488,7 +477,6 @@
     ctx.fillStyle = grd;
     ctx.fillRect(0, y0, W, H-y0);
 
-    // soft edge
     const edge = ctx.createLinearGradient(0, y0-70, 0, y0+10);
     edge.addColorStop(0, "rgba(255,255,255,0)");
     edge.addColorStop(1, "rgba(255,255,255,0.35)");
@@ -511,7 +499,6 @@
     const cx = W/2, cy = H/2 + 34;
     const rot = time * 0.0010 * speed;
 
-    // tree particles depth sort
     const pts = treePts.map(p=>{
       const rz = rotY(p.x, p.z, rot);
       const pr = project3D(rz.x, p.y, rz.z);
@@ -528,7 +515,6 @@
       const r = (p.size * p.ps) * (0.85 + 0.35*tw);
       const a = clamp(0.18 + 0.55*(1-p.u) + 0.20*tw, 0.05, 0.95);
 
-      // small glow (keeps tree crisp, not foggy)
       glowDot(x,y, r*3.0, rgba(p.c, 0.35), a);
       ctx.globalAlpha = a;
       ctx.fillStyle = rgba(p.c, 0.92);
@@ -538,7 +524,6 @@
     }
     ctx.restore();
 
-    // heart topper (particles)
     const top = project3D(0, tree.topY - 58, 0);
     const hx = cx + top.x;
     const hy = cy + top.y;
@@ -560,7 +545,6 @@
     }
     ctx.restore();
 
-    // base glow
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     const base = project3D(0, tree.topY + tree.height*0.95, 0);
@@ -572,9 +556,7 @@
     const cx = W/2, cy = H/2 + 54;
     const rot = time * 0.00055 * speed;
 
-    // rings depth sort
     const pts = ringPts.map(p=>{
-      // animate phase traveling around the ring
       const phase = p.phase + time*0.0009*speed;
       const wobble = 0.12*Math.sin(p.a*6 + phase*2 + p.seed);
       const rz = rotY(p.x, p.z, rot + wobble);
@@ -592,7 +574,6 @@
       const rr = (1.1 + 1.8*tw) * p.ps;
       const a = 0.20 + 0.55*tw;
 
-      // mostly white with slight pink tint on some segments
       const tint = (Math.sin(p.a*3 + time*0.0012) > 0.6) ? "rgba(255,120,170,0.35)" : "rgba(255,255,255,0.35)";
       glowDot(x,y, rr*4.2, tint, a);
       ctx.globalAlpha = 0.9;
@@ -632,7 +613,6 @@
 
   document.getElementById("openBtn").addEventListener("click", openCard);
 
-  // toggle speed after opened
   window.addEventListener("click", (e)=>{
     if(!opened) return;
     if(e.target && (e.target.id==="openBtn" || e.target.closest?.("#openBtn"))) return;
@@ -641,8 +621,8 @@
 
   // init
   resize();
-
 })();
 </script>
 </body>
 </html>
+
